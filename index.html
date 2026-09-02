@@ -9,6 +9,7 @@
 <style>
 /* ============ DASAR ============ */
 *{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
 body{background:#e2e8f0;font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:#1e293b;-webkit-tap-highlight-color:transparent}
 #app{max-width:520px;margin:0 auto;min-height:100vh;background:#f8fafc;box-shadow:0 0 24px rgba(0,0,0,.08);padding-bottom:24px}
 button{font-family:inherit;cursor:pointer;border:none}
@@ -380,9 +381,10 @@ const DEF_SET={
   opt:JSON.parse(JSON.stringify(DEF_OPT)),
   footerImg:'', sheetdb:''
 };
-let settings=DEF_SET, records=[], editingId=null, previewRec=null, cloneEl=null;
+let settings=DEF_SET, records=[], editingId=null, previewRec=null, cloneEl=null, pendingFootImg='';
 function loadAll(){
   try{const s=JSON.parse(localStorage.getItem(K_SET));if(s)settings=Object.assign(JSON.parse(JSON.stringify(DEF_SET)),s);settings.opt=Object.assign(JSON.parse(JSON.stringify(DEF_OPT)),settings.opt||{})}catch(e){}
+  settings.footerImg=settings.footerImg||'';settings.sheetdb=settings.sheetdb||'';
   try{records=JSON.parse(localStorage.getItem(K_REC))||[]}catch(e){records=[]}
 }
 const saveRecords=()=>{try{localStorage.setItem(K_REC,JSON.stringify(records))}catch(e){toast('Gagal menyimpan: penyimpanan penuh')}};
@@ -422,10 +424,8 @@ function fillForm(r){
   $('f_tahun').value=r.tahun||''; $('f_cc').value=r.silinder||''; $('f_daya').value=r.dayaListrik||'';
   $('f_rangka').value=r.noRangka||''; $('f_mesin').value=r.noMesin||''; $('f_bpkb').value=r.noBPKB||'';
   $('f_detil').value=r.detil||''; $('f_pnama').value=r.namaPemohon||''; $('f_pwa').value=r.waPemohon||'';
-  ['merk','jenis','warna','bbm','milik','urus','berkas'].forEach(k=>{
-    const map={merk:'merk',jenis:'jenis',warna:'warnaTNKB',bbm:'bahanBakar',milik:'kepemilikan',urus:'pengurusan',berkas:'berkas'};
-    buildChips(k,r[map[k]]||[]);
-  });
+  const map={merk:'merk',jenis:'jenis',warna:'warnaTNKB',bbm:'bahanBakar',milik:'kepemilikan',urus:'pengurusan',berkas:'berkas'};
+  ['merk','jenis','warna','bbm','milik','urus','berkas'].forEach(k=>buildChips(k,r[map[k]]||[]));
   [['stnk','f_stnk'],['pajak','f_pajak'],['tglTerima','f_tterima'],['tglSelesai','f_tselesai']].forEach(([k,id])=>{
     $(id).dataset.iso=r[k]||''; $(id).value=r[k]?fmtID(r[k]):'';
   });
@@ -592,7 +592,7 @@ function openCal(id){
 function renderCal(){
   $('calTitle').textContent='Pilih Tanggal';
   $('calLabel').textContent=BULAN[calM]+' '+calY;
-  const sel=$('calTarget')?$(calTarget).dataset.iso:'';
+  const sel=calTarget?($(calTarget).dataset.iso||''):'';
   const today=isoToday();
   const first=new Date(calY,calM,1).getDay(),days=new Date(calY,calM+1,0).getDate();
   let h=['Min','Sen','Sel','Rab','Kam','Jum','Sab'].map(d=>`<div class="dow">${d}</div>`).join('');
@@ -622,8 +622,8 @@ function renderCal(){
 const SHEET_COLS=['ID','Nopol','NamaPemilik','WAPemilik','Alamat','Merk','Jenis','Tipe','Model','Tahun','Silinder','DayaListrik','NoRangka','NoMesin','WarnaTNKB','BahanBakar','Kepemilikan','NoBPKB','STNK','PajakTahunan','Pengurusan','DetilPengurusan','NamaPemohon','WAPemohon','BerkasPemohon','TglTerima','TglSelesai','UpdatedAt'];
 const jArr=a=>Array.isArray(a)?a.join(', '):(a||'');
 const recToSheet=r=>({ID:r.id,Nopol:r.nopol,NamaPemilik:r.namaPemilik,WAPemilik:r.waPemilik,Alamat:r.alamat,Merk:jArr(r.merk),Jenis:jArr(r.jenis),Tipe:r.tipe,Model:r.model,Tahun:r.tahun,Silinder:r.silinder,DayaListrik:r.dayaListrik,NoRangka:r.noRangka,NoMesin:r.noMesin,WarnaTNKB:jArr(r.warnaTNKB),BahanBakar:jArr(r.bahanBakar),Kepemilikan:jArr(r.kepemilikan),NoBPKB:r.noBPKB,STNK:r.stnk||'',PajakTahunan:r.pajak||'',Pengurusan:jArr(r.pengurusan),DetilPengurusan:r.detil,NamaPemohon:r.namaPemohon,WAPemohon:r.waPemohon,BerkasPemohon:jArr(r.berkas),TglTerima:r.tglTerima||'',TglSelesai:r.tglSelesai||'',UpdatedAt:r.updatedAt});
-const sheetToRec=w=>({id:w.ID||uid(),nopol:w.Nopol||'',namaPemilik:w.NamaPemilik||'',waPemilik:w.WAPemilik||'',alamat:w.Alamat||'',merk:sA(w.Merk),jenis:sA(w.Jenis),tipe:w.Tipe||'',model:w.Model||'',tahun:w.Tahun||'',silinder:w.Silinder||'',dayaListrik:w.DayaListrik||'',noRangka:w.NoRangka||'',noMesin:w.NoMesin||'',warnaTNKB:sA(w.WarnTNKB)||sA(w.WarnaTNKB),bahanBakar:sA(w.BahanBakar),kepemilikan:sA(w.Kepemilikan),noBPKB:w.NoBPKB||'',stnk:w.STNK||'',pajak:w.PajakTahunan||'',pengurusan:sA(w.Pengurusan),detil:w.DetilPengurusan||'',namaPemohon:w.NamaPemohon||'',waPemohon:w.WAPemohon||'',berkas:sA(w.BerkasPemohon),tglTerima:w.TglTerima||'',tglSelesai:w.TglSelesai||'',updatedAt:w.UpdatedAt||new Date().toISOString()});
 const sA=s=>String(s||'').split(',').map(x=>x.trim()).filter(Boolean);
+const sheetToRec=w=>({id:w.ID||uid(),nopol:w.Nopol||'',namaPemilik:w.NamaPemilik||'',waPemilik:w.WAPemilik||'',alamat:w.Alamat||'',merk:sA(w.Merk),jenis:sA(w.Jenis),tipe:w.Tipe||'',model:w.Model||'',tahun:w.Tahun||'',silinder:w.Silinder||'',dayaListrik:w.DayaListrik||'',noRangka:w.NoRangka||'',noMesin:w.NoMesin||'',warnaTNKB:sA(w.WarnaTNKB),bahanBakar:sA(w.BahanBakar),kepemilikan:sA(w.Kepemilikan),noBPKB:w.NoBPKB||'',stnk:w.STNK||'',pajak:w.PajakTahunan||'',pengurusan:sA(w.Pengurusan),detil:w.DetilPengurusan||'',namaPemohon:w.NamaPemohon||'',waPemohon:w.WAPemohon||'',berkas:sA(w.BerkasPemohon),tglTerima:w.TglTerima||'',tglSelesai:w.TglSelesai||'',updatedAt:w.UpdatedAt||new Date().toISOString()});
 async function syncOne(r){
   const ep=(settings.sheetdb||'').trim();if(!ep)return;
   try{
@@ -679,28 +679,29 @@ function buildAllChips(){['merk','jenis','warna','bbm','milik','urus','berkas'].
 function loadSettingsUI(){
   const H=(p,p1)=>{$('setH'+p).value=settings[p1].text;$('setH'+p+'s').value=settings[p1].size;$('setH'+p+'b').checked=!!settings[p1].b;$('setH'+p+'i').checked=!!settings[p1].i;$('setH'+p+'u').checked=!!settings[p1].u};
   H(1,'h1');H(2,'h2');
-  $('setFootUrl').value=settings.footerImg.startsWith('data:')?'':settings.footerImg;
+  pendingFootImg=settings.footerImg||'';
+  $('setFootUrl').value=(settings.footerImg||'').startsWith('data:')?'':(settings.footerImg||'');
   $('setSdb').value=settings.sheetdb||'';
   updateFootPrev();renderOptGroups();
 }
 function updateFootPrev(){
   const p=$('setFootPrev');
-  if(settings.footerImg){p.src=settings.footerImg;p.style.display='block'}else p.style.display='none';
+  if(pendingFootImg){p.src=pendingFootImg;p.style.display='block'}else p.style.display='none';
 }
- $('setFootUrl').addEventListener('input',()=>{settings.footerImg=$('setFootUrl').value.trim();updateFootPrev()});
+ $('setFootUrl').addEventListener('input',()=>{pendingFootImg=$('setFootUrl').value.trim();updateFootPrev()});
  $('setFootFile').addEventListener('change',e=>{
   const f=e.target.files[0];if(!f)return;
   const rd=new FileReader();
-  rd.onload=()=>{settings.footerImg=rd.result;$('setFootUrl').value='';updateFootPrev();toast('Gambar footer dimuat — jangan lupa Simpan Pengaturan')};
+  rd.onload=()=>{pendingFootImg=rd.result;$('setFootUrl').value='';updateFootPrev();toast('Gambar footer dimuat — klik Simpan Pengaturan')};
   rd.readAsDataURL(f);
 });
- $('setFootClr').onclick=()=>{settings.footerImg='';$('setFootUrl').value='';$('setFootFile').value='';updateFootPrev()};
+ $('setFootClr').onclick=()=>{pendingFootImg='';$('setFootUrl').value='';$('setFootFile').value='';updateFootPrev()};
  $('btnSettings').onclick=()=>{loadSettingsUI();$('settingsModal').hidden=false};
  $('setClose').onclick=()=>$('settingsModal').hidden=true;
  $('setSave').onclick=()=>{
   settings.h1={text:$('setH1').value,size:+$('setH1s').value||18,b:$('setH1b').checked?1:0,i:$('setH1i').checked?1:0,u:$('setH1u').checked?1:0};
   settings.h2={text:$('setH2').value,size:+$('setH2s').value||12,b:$('setH2b').checked?1:0,i:$('setH2i').checked?1:0,u:$('setH2u').checked?1:0};
-  settings.footerImg=$('setFootUrl').value.trim()||settings.footerImg;
+  settings.footerImg=pendingFootImg||'';
   settings.sheetdb=$('setSdb').value.trim();
   saveSettings();toast('Pengaturan tersimpan ✓');$('settingsModal').hidden=true;
 };
