@@ -445,7 +445,7 @@ function resetForm(){
 /* ================= RENDER LEMBAR A4 (3 LAJUR) ================= */
 function renderSheet(el,r){
   const h=s=>`font-size:${s.size}px;font-weight:${s.b?700:400};font-style:${s.i?'italic':'normal'};text-decoration:${s.u?'underline':'none'}`;
-  const cell=(l,v,span,tall)=>`<div class="cell${span?' span'+span:''}${tall?' tall':''}"><div class="lab">${l}</div><div class="val">${v&&String(v).trim()?esc(v):'&nbsp;'}</div></div>`;
+  const cell=(l,v,span,tall)=>`<div class="cell${span?' span'+span:''}${tall?' tall':''}"><div class="lab">${l}</div><div class="val">${v&&String(v).trim()?esc(v).replace(/\n/g,'<br>'):'&nbsp;'}</div></div>`;
   const j=a=>Array.isArray(a)?a.join(', '):(a||'');
   let hd='';
   if(settings.h1.text)hd+=`<div class="sh-h" style="${h(settings.h1)}">${esc(settings.h1.text)}</div>`;
