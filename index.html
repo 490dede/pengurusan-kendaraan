@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Data Pengurusan Kendaraan</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+/* ============ DASAR ============ */
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#e2e8f0;font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:#1e293b;-webkit-tap-highlight-color:transparent}
+#app{max-width:520px;margin:0 auto;min-height:100vh;background:#f8fafc;box-shadow:0 0 24px rgba(0,0,0,.08);padding-bottom:24px}
+button{font-family:inherit;cursor:pointer;border:none}
+input,textarea{font-family:inherit;font-size:16px;width:100%;padding:10px 12px;border:1.5px solid #cbd5e1;border-radius:10px;background:#fff;color:#1e293b;outline:none}
+input:focus,textarea:focus{border-color:#0d9488}
+input[readonly]{background:#f1f5f9;color:#334155}
+label{display:block;font-size:12px;font-weight:700;color:#475569;margin:12px 2px 5px;text-transform:uppercase;letter-spacing:.4px}
+h2.sec{font-size:17px;margin:18px 4px 10px;color:#0f766e}
+
+/* ============ TOPBAR & MODE ============ */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:#0f766e;color:#fff}
+.topbar .ttl{font-weight:800;font-size:15px;letter-spacing:.3px}
+.iconbtn{background:rgba(255,255,255,.18);color:#fff;font-size:19px;width:38px;height:38px;border-radius:10px}
+.modebar{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px 14px;background:#fff;border-bottom:1px solid #e2e8f0}
+.modebtn{padding:11px 8px;border-radius:12px;font-weight:700;font-size:14px;background:#f1f5f9;color:#475569;border:1.5px solid #e2e8f0}
+.modebtn.active{background:#0d9488;color:#fff;border-color:#0d9488}
+.wrap{padding:4px 14px}
+
+/* ============ FORM ============ */
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{padding:7px 12px;border-radius:999px;border:1.5px solid #cbd5e1;background:#fff;font-size:13px;font-weight:600;color:#475569}
+.chip.on{background:#0d9488;border-color:#0d9488;color:#fff}
+.datewrap{position:relative}
+.datewrap .clr{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:#e2e8f0;color:#64748b;width:24px;height:24px;border-radius:50%;font-size:12px;line-height:1}
+.sticky-actions{position:sticky;bottom:0;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:12px 14px;background:linear-gradient(to top,#f8fafc 70%,rgba(248,250,252,0));z-index:10}
+.abtn{padding:13px 6px;border-radius:12px;font-weight:700;font-size:13px;background:#fff;color:#0f766e;border:1.5px solid #0d9488}
+.abtn.primary{background:#0d9488;color:#fff}
+.abtn:disabled{opacity:.6}
+.hint{font-size:12px;color:#94a3b8;margin:8px 2px}
+
+/* ============ CARI ============ */
+.searchrow{display:flex;gap:8px}
+.searchrow button{padding:0 16px;border-radius:10px;background:#0f766e;color:#fff;font-weight:700;font-size:14px;white-space:nowrap}
+.rcard{background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:12px 14px;margin-top:10px}
+.rcard .r1{font-weight:800;font-size:15px;color:#0f172a}
+.rcard .r1 span{color:#0d9488}
+.rcard .r2{font-size:12.5px;color:#64748b;margin-top:3px}
+.empty{text-align:center;color:#94a3b8;font-size:13.5px;padding:36px 10px}
+
+/* ============ OVERLAY PREVIEW A4 ============ */
+#overlay{position:fixed;inset:0;background:rgba(15,23,42,.78);z-index:60;display:flex;flex-direction:column}
+.ovbar{display:flex;gap:6px;padding:10px;background:#0f172a;overflow-x:auto;flex-shrink:0}
+.ovbar button{padding:9px 13px;border-radius:9px;font-weight:700;font-size:12.5px;background:#334155;color:#fff;white-space:nowrap}
+.ovbar button.danger{background:#b91c1c}
+#ovScroll{flex:1;overflow:auto;padding:14px}
+#ovHolder{margin:0 auto;box-shadow:0 8px 30px rgba(0,0,0,.5);background:#fff}
+
+/* ============ LEMBAR A4 (794x1123 px @96dpi) ============ */
+.sheet-a4{width:794px;min-height:1123px;background:#fff;color:#111;padding:34px 38px;display:flex;flex-direction:column;font-family:Arial,Helvetica,sans-serif;transform-origin:top left}
+.sh-head{text-align:center;margin-bottom:12px}
+.sh-head .sh-h{line-height:1.35}
+.sh-head hr{border:none;border-top:2.5px solid #111;margin-top:10px}
+.sh-grid{display:grid;grid-template-columns:1fr 1fr 1fr;border:1.5px solid #333}
+.cell{border-bottom:1px solid #333;border-right:1px solid #333;padding:6px 9px;min-height:46px}
+.cell.span2{grid-column:span 2}
+.cell.span3{grid-column:1/-1}
+.cell.tall{min-height:110px}
+.lab{font-size:10px;color:#555;text-transform:uppercase;letter-spacing:.5px}
+.val{font-size:14px;font-weight:700;margin-top:3px;word-break:break-word;line-height:1.35}
+.sh-foot{margin-top:auto;padding-top:12px;text-align:center}
+.sh-foot img{max-height:115px;max-width:100%}
+.sh-meta{font-size:9px;color:#999;text-align:right;margin-top:8px}
+
+/* ============ MODAL UMUM ============ */
+.modal{position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:70;display:flex;align-items:center;justify-content:center;padding:14px}
+.mbox{background:#fff;border-radius:16px;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;padding:18px}
+.mbox h3{font-size:16px;margin-bottom:12px;color:#0f766e}
+.mhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.mhead .x{background:#f1f5f9;color:#475569;width:32px;height:32px;border-radius:50%;font-size:14px}
+.card{border:1.5px solid #e2e8f0;border-radius:12px;padding:12px;margin-top:12px;background:#fff}
+.card .ct{font-size:13px;font-weight:800;color:#0f766e;margin-bottom:8px}
+
+/* ============ KALENDER ============ */
+#calModal .mbox{max-width:340px}
+.cal-top{display:flex;align-items:center;justify-content:space-between;margin:8px 0}
+.cal-top b{font-size:15px}
+.cal-top .nav{background:#f1f5f9;color:#0f766e;width:34px;height:34px;border-radius:9px;font-weight:800;font-size:15px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center}
+.cal-grid .dow{font-size:10.5px;font-weight:800;color:#94a3b8;padding:5px 0}
+.cal-grid .day{padding:9px 0;border-radius:9px;font-size:13.5px;font-weight:600;background:#f8fafc}
+.cal-grid .day:active{background:#99f6e4}
+.cal-grid .day.sun{color:#dc2626}
+.cal-grid .day.sel{background:#0d9488;color:#fff}
+.cal-grid .day.today{box-shadow:inset 0 0 0 2px #0d9488}
+.cal-grid .pad{visibility:hidden}
+.cal-foot{display:flex;gap:8px;margin-top:12px}
+.cal-foot button{flex:1;padding:10px;border-radius:10px;font-weight:700;font-size:13px;background:#f1f5f9;color:#334155}
+
+/* ============ PENGATURAN ============ */
+.setrow{margin-bottom:12px}
+.setrow .inline{display:flex;gap:8px;align-items:center;margin-top:6px}
+.setrow .inline input[type=number]{width:74px;flex:none;text-align:center}
+.fmt{display:flex;gap:14px;margin-top:6px;font-size:13px;color:#475569}
+.fmt label{display:flex;align-items:center;gap:5px;margin:0;text-transform:none;font-size:13px;font-weight:600}
+.fmt input{width:16px;height:16px}
+.opt-tag{display:inline-flex;align-items:center;gap:5px;background:#e0f2f1;color:#0f766e;border:1px solid #99f6e4;padding:5px 9px;border-radius:999px;font-size:12.5px;font-weight:700;margin:0 6px 6px 0}
+.opt-tag b{font-weight:400;color:#0d9488}
+.optadd{display:flex;gap:7px;margin-top:4px}
+.optadd input{flex:1}
+.optadd button{flex:none;width:44px;border-radius:10px;background:#0d9488;color:#fff;font-size:19px;font-weight:800}
+.sbtn{padding:10px 14px;border-radius:10px;font-weight:700;font-size:13px;background:#0f766e;color:#fff;margin:4px 6px 4px 0}
+.sbtn.gray{background:#e2e8f0;color:#334155}
+.sbtn.red{background:#fee2e2;color:#b91c1c}
+#setFootPrev{max-height:80px;margin-top:8px;display:none;border-radius:8px;border:1px solid #e2e8f0}
+#toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#0f172a;color:#fff;padding:11px 20px;border-radius:12px;font-size:13.5px;font-weight:600;z-index:99;display:none;box-shadow:0 6px 20px rgba(0,0,0,.35);max-width:88vw;text-align:center}
+
+/* ============ CETAK ============ */
+#stage{position:absolute;left:-10000px;top:0}
+@media print{
+  @page{size:A4 portrait;margin:0}
+  body *{visibility:hidden}
+  #stage,#stage *{visibility:visible}
+  #stage{position:absolute;left:0;top:0}
+  .sheet-a4{box-shadow:none}
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="topbar">
+    <div class="ttl">📋 Data Pengurusan Kendaraan</div>
+    <button class="iconbtn" id="btnSettings" title="Pengaturan">⚙</button>
+  </div>
+
+  <div class="modebar">
+    <button class="modebtn active" id="btnEntri">➕ Entri Data</button>
+    <button class="modebtn" id="btnCari">🔍 Cari Data</button>
+  </div>
+
+  <!-- ================= FORM ================= -->
+  <section id="viewForm">
+    <div class="wrap">
+      <h2 class="sec" id="formTitle">Entri Data Baru</h2>
+
+      <label>Nomor Polisi (Nopol)</label>
+      <input id="f_nopol" placeholder="contoh: B 1234 XYZ" autocomplete="off">
+
+      <label>Nama Pemilik</label>
+      <input id="f_nama" autocomplete="off">
+
+      <label>Nomor WhatsApp Pemilik</label>
+      <input id="f_wapemilik" inputmode="tel" placeholder="08xx" autocomplete="off">
+
+      <label>Alamat Pemilik</label>
+      <textarea id="f_alamat" rows="3"></textarea>
+
+      <label>Merk</label>
+      <div class="chips" id="ch_merk"></div>
+
+      <label>Jenis</label>
+      <div class="chips" id="ch_jenis"></div>
+
+      <label>Tipe</label>
+      <input id="f_tipe" autocomplete="off">
+
+      <label>Model</label>
+      <input id="f_model" autocomplete="off">
+
+      <label>Tahun Pembuatan</label>
+      <input id="f_tahun" inputmode="numeric" maxlength="4" autocomplete="off">
+
+      <label>Silinder / CC</label>
+      <input id="f_cc" inputmode="numeric" autocomplete="off">
+
+      <label>Daya Listrik</label>
+      <input id="f_daya" placeholder="contoh: 300 Watt" autocomplete="off">
+
+      <label>Nomor Rangka / NIK / VIN</label>
+      <input id="f_rangka" autocomplete="off">
+
+      <label>Nomor Mesin</label>
+      <input id="f_mesin" autocomplete="off">
+
+      <label>Warna TNKB</label>
+      <div class="chips" id="ch_warna"></div>
+
+      <label>Bahan Bakar</label>
+      <div class="chips" id="ch_bbm"></div>
+
+      <label>Kepemilikan</label>
+      <div class="chips" id="ch_milik"></div>
+
+      <label>Nomor BPKB</label>
+      <input id="f_bpkb" autocomplete="off">
+
+      <label>Masa Laku STNK</label>
+      <div class="datewrap"><input id="f_stnk" readonly placeholder="pilih tanggal"><button class="clr" data-for="f_stnk" type="button">✕</button></div>
+
+      <label>Masa Laku Pajak Tahunan</label>
+      <div class="datewrap"><input id="f_pajak" readonly placeholder="pilih tanggal"><button class="clr" data-for="f_pajak" type="button">✕</button></div>
+
+      <label>Pengurusan (boleh pilih lebih dari satu)</label>
+      <div class="chips" id="ch_urus"></div>
+
+      <label>Detil Pengurusan</label>
+      <textarea id="f_detil" rows="4" placeholder="jelaskan detail pengurusan..."></textarea>
+
+      <label>Nama Pemohon</label>
+      <input id="f_pnama" autocomplete="off">
+
+      <label>WhatsApp Pemohon</label>
+      <input id="f_pwa" inputmode="tel" autocomplete="off">
+
+      <label>Berkas Pemohon</label>
+      <div class="chips" id="ch_berkas"></div>
+
+      <label>Tanggal Terima Data Kendaraan</label>
+      <div class="datewrap"><input id="f_tterima" readonly placeholder="pilih tanggal"><button class="clr" data-for="f_tterima" type="button">✕</button></div>
+
+      <label>Tanggal Selesai Pengurusan</label>
+      <div class="datewrap"><input id="f_tselesai" readonly placeholder="pilih tanggal"><button class="clr" data-for="f_tselesai" type="button">✕</button></div>
+    </div>
+
+    <div class="sticky-actions">
+      <button class="abtn" id="btnPdf">📄 Export PDF</button>
+      <button class="abtn primary" id="btnSave">💾 Simpan</button>
+      <button class="abtn" id="btnImg">🖼 Simpan Gambar</button>
+    </div>
+  </section>
+
+  <!-- ================= CARI ================= -->
+  <section id="viewFind" hidden>
+    <div class="wrap">
+      <h2 class="sec">Cari Data</h2>
+      <div class="searchrow">
+        <input id="q" placeholder="Nopol / nama / rangka / mesin / BPKB..." autocomplete="off">
+        <button id="btnDoSearch">Cari</button>
+      </div>
+      <div class="hint">Ketik lalu tekan Cari. Hasil urut dari data terbaru.</div>
+      <div id="resultList"></div>
+    </div>
+  </section>
+</div>
+
+<!-- ================= OVERLAY PREVIEW A4 ================= -->
+<div id="overlay" hidden>
+  <div class="ovbar">
+    <button id="ovEdit">✏️ Edit</button>
+    <button id="ovPdf">📄 PDF</button>
+    <button id="ovImg">🖼 Gambar</button>
+    <button id="ovPrint">🖨 Print</button>
+    <button id="ovDel" class="danger">🗑 Hapus</button>
+    <button id="ovClose">✕ Tutup</button>
+  </div>
+  <div id="ovScroll"><div id="ovHolder"></div></div>
+</div>
+
+<!-- ================= MODAL PENGATURAN ================= -->
+<div id="settingsModal" class="modal" hidden>
+  <div class="mbox">
+    <div class="mhead"><h3>⚙ Pengaturan</h3><button class="x" id="setClose">✕</button></div>
+
+    <div class="card">
+      <div class="ct">Header Teks (2 baris)</div>
+      <div class="setrow">
+        <label style="margin-top:0">Baris 1</label>
+        <input id="setH1" placeholder="teks baris 1">
+        <div class="inline"><input type="number" id="setH1s" min="10" max="40" title="ukuran font"> <span style="font-size:12px;color:#64748b">ukuran px</span></div>
+        <div class="fmt">
+          <label><input type="checkbox" id="setH1b"> Bold</label>
+          <label><input type="checkbox" id="setH1i"> Italic</label>
+          <label><input type="checkbox" id="setH1u"> Underline</label>
+        </div>
+      </div>
+      <div class="setrow">
+        <label>Baris 2</label>
+        <input id="setH2" placeholder="teks baris 2">
+        <div class="inline"><input type="number" id="setH2s" min="8" max="40" title="ukuran font"> <span style="font-size:12px;color:#64748b">ukuran px</span></div>
+        <div class="fmt">
+          <label><input type="checkbox" id="setH2b"> Bold</label>
+          <label><input type="checkbox" id="setH2i"> Italic</label>
+          <label><input type="checkbox" id="setH2u"> Underline</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ct">Daftar Varian Pilihan <span style="font-weight:400;color:#94a3b8">(langsung tersimpan saat diubah)</span></div>
+      <div id="optGroups"></div>
+    </div>
+
+    <div class="card">
+      <div class="ct">Gambar Footer</div>
+      <div class="setrow">
+        <label style="margin-top:0">URL gambar (mis. dari GitHub Raw)</label>
+        <input id="setFootUrl" placeholder="https://raw.githubusercontent.com/...">
+      </div>
+      <div class="setrow">
+        <label>…atau upload langsung dari perangkat</label>
+        <input type="file" id="setFootFile" accept="image/*">
+      </div>
+      <img id="setFootPrev" alt="">
+      <button class="sbtn red" id="setFootClr">Hapus Gambar Footer</button>
+    </div>
+
+    <div class="card">
+      <div class="ct">Sinkron Google Sheets (via SheetDB — tanpa Apps Script)</div>
+      <div class="hint">Buat spreadsheet dengan header kolom sesuai di bawah → daftar gratis di sheetdb.io → hubungkan sheet → tempel API URL-nya di sini.</div>
+      <div class="setrow"><input id="setSdb" placeholder="https://sheetdb.io/api/v1/xxxxx"></div>
+      <button class="sbtn gray" id="btnCopyHeader">📋 Salin Header Kolom</button>
+      <button class="sbtn gray" id="btnTestSdb">🔌 Test Koneksi</button>
+      <button class="sbtn" id="btnSendAll">⬆ Kirim Semua Data</button>
+      <button class="sbtn gray" id="btnPullAll">⬇ Ambil dari Sheet</button>
+      <div class="hint" style="color:#b45309">Catatan: data utama tetap tersimpan di perangkat ini (offline). Sheet berfungsi sebagai salinan otomatis.</div>
+    </div>
+
+    <div class="card">
+      <div class="ct">Backup Data (JSON)</div>
+      <button class="sbtn" id="btnExpData">⬇ Export Backup</button>
+      <button class="sbtn gray" id="btnImpDataBtn">⬆ Import Backup</button>
+      <input type="file" id="impData" accept=".json" hidden>
+    </div>
+
+    <button class="sbtn" id="setSave" style="width:100%;padding:13px">💾 Simpan Pengaturan</button>
+  </div>
+</div>
+
+<!-- ================= MODAL KALENDER ================= -->
+<div id="calModal" class="modal" hidden>
+  <div class="mbox">
+    <div class="mhead"><h3 id="calTitle">—</h3><button class="x" id="calClose">✕</button></div>
+    <div class="cal-top">
+      <button class="nav" id="calPrevY">«</button>
+      <button class="nav" id="calPrev">‹</button>
+      <b id="calLabel">—</b>
+      <button class="nav" id="calNext">›</button>
+      <button class="nav" id="calNextY">»</button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="cal-foot">
+      <button id="calToday">Hari Ini</button>
+      <button id="calClear">Kosongkan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lembar A4 off-screen untuk export/print -->
+<div id="stage"><div id="stageSheet" class="sheet-a4"></div></div>
+
+<div id="toast"></div>
+
+<script>
+/* ================= HELPERS ================= */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const uid=()=>'B'+Date.now().toString(36).toUpperCase()+Math.random().toString(36).slice(2,5).toUpperCase();
+const isoToday=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const fmtID=iso=>{if(!iso)return'';const p=iso.split('-');return p[2]+'/'+p[1]+'/'+p[0]};
+const fmtDT=iso=>{try{return new Date(iso).toLocaleString('id-ID',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}catch(e){return iso||''}};
+let toastTimer=null;
+function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.style.display='none',2600)}
+const safe=s=>String(s||'').replace(/[^\w\-]+/g,'_').slice(0,40)||'data';
+
+/* ================= DATA & PENYIMPANAN ================= */
+const K_REC='pk_records_v1', K_SET='pk_settings_v1';
+const DEF_OPT={
+  merk:['Toyota','Honda','Suzuki','Daihatsu','Mitsubishi','Yamaha','Kawasaki','Isuzu','Hino','Bajaj','TVS','Vespa'],
+  jenis:['Sepeda Motor','Mobil Penumpang','Mobil Barang','Mobil Bus','Alat Berat'],
+  warna:['Hitam','Putih','Merah','Biru','Kuning','Hijau','Silver','Abu-abu','Emas','Oranye'],
+  bbm:['Bensin','Solar','Listrik','Hybrid','Gas (CNG)'],
+  milik:['Perorangan','Perusahaan','Pemerintah','BUMN','Lainnya'],
+  urus:['Perpanjangan Pajak Tahunan','Perpanjangan STNK 5 Tahun','Balik Nama','Mutasi Masuk','Mutasi Keluar','Ganti Plat','Duplikat STNK','Duplikat BPKB','Uji KIR','Lainnya'],
+  berkas:['STNK','BPKB','KTP','Kartu Keluarga','NPWP','Surat Kuasa','Faktur','Formulir A','Uji KIR','Kwitansi']
+};
+const DEF_SET={
+  h1:{text:'JASA PENGURUSAN KENDARAAN',size:18,b:1,i:0,u:0},
+  h2:{text:'Melayani Balik Nama • Pajak • STNK • Mutasi',size:12,b:0,i:0,u:0},
+  opt:JSON.parse(JSON.stringify(DEF_OPT)),
+  footerImg:'', sheetdb:''
+};
+let settings=DEF_SET, records=[], editingId=null, previewRec=null, cloneEl=null;
+function loadAll(){
+  try{const s=JSON.parse(localStorage.getItem(K_SET));if(s)settings=Object.assign(JSON.parse(JSON.stringify(DEF_SET)),s);settings.opt=Object.assign(JSON.parse(JSON.stringify(DEF_OPT)),settings.opt||{})}catch(e){}
+  try{records=JSON.parse(localStorage.getItem(K_REC))||[]}catch(e){records=[]}
+}
+const saveRecords=()=>{try{localStorage.setItem(K_REC,JSON.stringify(records))}catch(e){toast('Gagal menyimpan: penyimpanan penuh')}};
+const saveSettings=()=>{try{localStorage.setItem(K_SET,JSON.stringify(settings))}catch(e){toast('Gagal menyimpan pengaturan')}};
+
+/* ================= CHIPS (PILIHAN CHECKBOX) ================= */
+function buildChips(key,sel){
+  sel=sel||[];
+  const list=[...new Set([...(settings.opt[key]||[]),...sel])];
+  $('ch_'+key).innerHTML=list.map(v=>`<button type="button" class="chip${sel.includes(v)?' on':''}" data-v="${esc(v)}">${esc(v)}</button>`).join('');
+}
+const getChips=key=>[...document.querySelectorAll('#ch_'+key+' .chip.on')].map(b=>b.dataset.v);
+document.addEventListener('click',e=>{
+  const c=e.target.closest('.chip');
+  if(c&&c.parentElement.classList.contains('chips')){c.classList.toggle('on');return}
+  const cl=e.target.closest('.clr');
+  if(cl){const i=$(cl.dataset.for);i.value='';i.dataset.iso='';return}
+});
+
+/* ================= FORM COLLECT / FILL / RESET ================= */
+function collectForm(){
+  return {
+    id:editingId||'', nopol:$('f_nopol').value.trim(), namaPemilik:$('f_nama').value.trim(), waPemilik:$('f_wapemilik').value.trim(),
+    alamat:$('f_alamat').value.trim(), merk:getChips('merk'), jenis:getChips('jenis'), tipe:$('f_tipe').value.trim(),
+    model:$('f_model').value.trim(), tahun:$('f_tahun').value.trim(), silinder:$('f_cc').value.trim(), dayaListrik:$('f_daya').value.trim(),
+    noRangka:$('f_rangka').value.trim(), noMesin:$('f_mesin').value.trim(), warnaTNKB:getChips('warna'), bahanBakar:getChips('bbm'),
+    kepemilikan:getChips('milik'), noBPKB:$('f_bpkb').value.trim(), stnk:$('f_stnk').dataset.iso||'', pajak:$('f_pajak').dataset.iso||'',
+    pengurusan:getChips('urus'), detil:$('f_detil').value.trim(), namaPemohon:$('f_pnama').value.trim(), waPemohon:$('f_pwa').value.trim(),
+    berkas:getChips('berkas'), tglTerima:$('f_tterima').dataset.iso||'', tglSelesai:$('f_tselesai').dataset.iso||'',
+    updatedAt:new Date().toISOString()
+  };
+}
+function fillForm(r){
+  editingId=r.id;
+  $('f_nopol').value=r.nopol||''; $('f_nama').value=r.namaPemilik||''; $('f_wapemilik').value=r.waPemilik||'';
+  $('f_alamat').value=r.alamat||''; $('f_tipe').value=r.tipe||''; $('f_model').value=r.model||'';
+  $('f_tahun').value=r.tahun||''; $('f_cc').value=r.silinder||''; $('f_daya').value=r.dayaListrik||'';
+  $('f_rangka').value=r.noRangka||''; $('f_mesin').value=r.noMesin||''; $('f_bpkb').value=r.noBPKB||'';
+  $('f_detil').value=r.detil||''; $('f_pnama').value=r.namaPemohon||''; $('f_pwa').value=r.waPemohon||'';
+  ['merk','jenis','warna','bbm','milik','urus','berkas'].forEach(k=>{
+    const map={merk:'merk',jenis:'jenis',warna:'warnaTNKB',bbm:'bahanBakar',milik:'kepemilikan',urus:'pengurusan',berkas:'berkas'};
+    buildChips(k,r[map[k]]||[]);
+  });
+  [['stnk','f_stnk'],['pajak','f_pajak'],['tglTerima','f_tterima'],['tglSelesai','f_tselesai']].forEach(([k,id])=>{
+    $(id).dataset.iso=r[k]||''; $(id).value=r[k]?fmtID(r[k]):'';
+  });
+  $('formTitle').textContent='Ubah Data'+(r.nopol?': '+r.nopol:'');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function resetForm(){
+  editingId=null;
+  document.querySelectorAll('#viewForm input, #viewForm textarea').forEach(i=>{
+    if(i.type==='checkbox')return;
+    i.value=''; if(i.dataset&&'iso'in i.dataset)i.dataset.iso='';
+  });
+  ['merk','jenis','warna','bbm','milik','urus','berkas'].forEach(k=>buildChips(k,[]));
+  $('formTitle').textContent='Entri Data Baru';
+}
+
+/* ================= RENDER LEMBAR A4 (3 LAJUR) ================= */
+function renderSheet(el,r){
+  const h=s=>`font-size:${s.size}px;font-weight:${s.b?700:400};font-style:${s.i?'italic':'normal'};text-decoration:${s.u?'underline':'none'}`;
+  const cell=(l,v,span,tall)=>`<div class="cell${span?' span'+span:''}${tall?' tall':''}"><div class="lab">${l}</div><div class="val">${v&&String(v).trim()?esc(v):'&nbsp;'}</div></div>`;
+  const j=a=>Array.isArray(a)?a.join(', '):(a||'');
+  let hd='';
+  if(settings.h1.text)hd+=`<div class="sh-h" style="${h(settings.h1)}">${esc(settings.h1.text)}</div>`;
+  if(settings.h2.text)hd+=`<div class="sh-h" style="${h(settings.h2)}">${esc(settings.h2.text)}</div>`;
+  el.innerHTML=`
+    <div class="sh-head">${hd}<hr></div>
+    <div class="sh-grid">
+      ${cell('Nomor Polisi',r.nopol)}${cell('Nama Pemilik',r.namaPemilik)}${cell('WhatsApp Pemilik',r.waPemilik)}
+      ${cell('Alamat Pemilik',r.alamat,3)}
+      ${cell('Merk',j(r.merk))}${cell('Jenis',j(r.jenis))}${cell('Tipe',r.tipe)}
+      ${cell('Model',r.model)}${cell('Tahun Pembuatan',r.tahun)}${cell('Silinder / CC',r.silinder)}
+      ${cell('Daya Listrik',r.dayaListrik)}${cell('No. Rangka / NIK / VIN',r.noRangka)}${cell('No. Mesin',r.noMesin)}
+      ${cell('Warna TNKB',j(r.warnaTNKB))}${cell('Bahan Bakar',j(r.bahanBakar))}${cell('Kepemilikan',j(r.kepemilikan))}
+      ${cell('Nomor BPKB',r.noBPKB)}${cell('Masa Laku STNK',r.stnk?fmtID(r.stnk):'')}${cell('Masa Laku Pajak Tahunan',r.pajak?fmtID(r.pajak):'')}
+      ${cell('Pengurusan',j(r.pengurusan),3)}
+      ${cell('Detil Pengurusan',r.detil,3,true)}
+      ${cell('Nama Pemohon',r.namaPemohon)}${cell('WhatsApp Pemohon',r.waPemohon)}${cell('Berkas Pemohon',j(r.berkas))}
+      ${cell('Tgl Terima Data',r.tglTerima?fmtID(r.tglTerima):'')}${cell('Tgl Selesai Pengurusan',r.tglSelesai?fmtID(r.tglSelesai):'',2)}
+    </div>
+    <div class="sh-foot">${settings.footerImg?`<img src="${settings.footerImg}" crossorigin="anonymous">`:''}</div>
+    <div class="sh-meta">ID: ${esc(r.id||'-')} • Diperbarui: ${fmtDT(r.updatedAt)}</div>`;
+}
+
+/* ================= OVERLAY PREVIEW ================= */
+function openPreview(r){
+  previewRec=r;
+  renderSheet($('stageSheet'),r);
+  cloneEl=document.createElement('div');cloneEl.className='sheet-a4';cloneEl.innerHTML=$('stageSheet').innerHTML;
+  const hold=$('ovHolder');hold.innerHTML='';hold.appendChild(cloneEl);
+  $('overlay').hidden=false;scalePreview();$('ovScroll').scrollTop=0;
+}
+function scalePreview(){
+  if(!cloneEl||$('overlay').hidden)return;
+  const z=Math.min(1,($('ovScroll').clientWidth-24)/794);
+  cloneEl.style.transform=`scale(${z})`;
+  $('ovHolder').style.width=(794*z)+'px';
+  $('ovHolder').style.height=(cloneEl.offsetHeight*z)+'px';
+}
+window.addEventListener('resize',scalePreview);
+function closePreview(){$('overlay').hidden=true;previewRec=null}
+ $('ovClose').onclick=closePreview;
+ $('ovEdit').onclick=()=>{if(previewRec){fillForm(previewRec);closePreview();switchView('form')}};
+ $('ovDel').onclick=()=>{
+  if(!previewRec)return;
+  if(!confirm('Hapus data '+ (previewRec.nopol||previewRec.namaPemilik||previewRec.id) +'?'))return;
+  records=records.filter(x=>x.id!==previewRec.id);saveRecords();closePreview();doSearch();toast('Data dihapus');
+};
+
+/* ================= EXPORT: GAMBAR / PDF / PRINT ================= */
+function checkLib(){if(!(window.html2canvas)){toast('Pustaka export belum termuat — perlu koneksi internet sekali');return false}return true}
+async function captureSheet(r,scale){
+  renderSheet($('stageSheet'),r);
+  await new Promise(res=>setTimeout(res,60)); // beri waktu img footer termuat
+  return await html2canvas($('stageSheet'),{scale:scale,backgroundColor:'#ffffff',useCORS:true,logging:false});
+}
+async function exportImage(r){
+  if(!checkLib())return;
+  toast('Menyiapkan gambar A4…');
+  try{
+    const cv=await captureSheet(r,3); // ±300 DPI
+    cv.toBlob(b=>{
+      const a=document.createElement('a');a.href=URL.createObjectURL(b);
+      a.download='Pengurusan_'+safe(r.nopol||r.namaPemilik)+'.png';document.body.appendChild(a);a.click();a.remove();
+      toast('Gambar tersimpan ✓ (di iPhone: tekan lama → Simpan Gambar)');
+    },'image/png');
+  }catch(e){toast('Export gambar gagal: '+e.message)}
+}
+async function exportPDF(r){
+  if(!checkLib()||!(window.jspdf&&window.jspdf.jsPDF)){toast('Pustaka PDF belum termuat — perlu internet sekali');return}
+  toast('Menyiapkan PDF A4…');
+  try{
+    const cv=await captureSheet(r,3);
+    const doc=new window.jspdf.jsPDF({orientation:'p',unit:'mm',format:'a4'});
+    const pageH=Math.round(cv.width*297/210);
+    let page=0;
+    for(let y=0;y<cv.height;y+=pageH){
+      const c2=document.createElement('canvas');
+      c2.width=cv.width;c2.height=Math.min(pageH,cv.height-y);
+      const ctx=c2.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c2.width,c2.height);ctx.drawImage(cv,0,-y);
+      if(page>0)doc.addPage();
+      doc.addImage(c2.toDataURL('image/jpeg',0.95),'JPEG',0,0,210,210*c2.height/c2.width);
+      page++;
+    }
+    doc.save('Pengurusan_'+safe(r.nopol||r.namaPemilik)+'.pdf');
+    toast('PDF tersimpan ✓');
+  }catch(e){toast('Export PDF gagal: '+e.message)}
+}
+function printSheet(r){renderSheet($('stageSheet'),r);setTimeout(()=>window.print(),80)}
+ $('ovPdf').onclick=()=>previewRec&&exportPDF(previewRec);
+ $('ovImg').onclick=()=>previewRec&&exportImage(previewRec);
+ $('ovPrint').onclick=()=>previewRec&&printSheet(previewRec);
+ $('btnPdf').onclick=async()=>{const r=collectForm();if(!r.nopol&&!r.namaPemilik){toast('Isi dulu Nopol atau Nama Pemilik');return}exportPDF(r)};
+ $('btnImg').onclick=async()=>{const r=collectForm();if(!r.nopol&&!r.namaPemilik){toast('Isi dulu Nopol atau Nama Pemilik');return}exportImage(r)};
+ $('btnSave').onclick=()=>{
+  const r=collectForm();
+  if(!r.nopol&&!r.namaPemilik){toast('Minimal isi Nopol atau Nama Pemilik');return}
+  if(!r.id)r.id=uid();
+  const i=records.findIndex(x=>x.id===r.id);
+  if(i>=0)records[i]=r;else records.unshift(r);
+  saveRecords();
+  toast(i>=0?'Pembaruan tersimpan ✓':'Data baru tersimpan ✓');
+  syncOne(r);
+  resetForm();
+  openPreview(r);
+};
+
+/* ================= NAVIGASI VIEW ================= */
+function switchView(v){
+  $('viewForm').hidden=v!=='form';$('viewFind').hidden=v!=='find';
+  $('btnEntri').classList.toggle('active',v==='form');
+  $('btnCari').classList.toggle('active',v==='find');
+  if(v==='form'&&editingId===null)resetForm();
+}
+ $('btnEntri').onclick=()=>switchView('form');
+ $('btnCari').onclick=()=>{switchView('find');doSearch()};
+
+/* ================= CARI DATA ================= */
+function doSearch(){
+  const q=$('q').value.trim().toLowerCase();
+  const list=records.filter(r=>!q||[r.nopol,r.namaPemilik,r.noRangka,r.noMesin,r.noBPKB,r.namaPemohon,r.tipe,r.model,r.tahun].some(v=>String(v||'').toLowerCase().includes(q)))
+    .sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)));
+  $('resultList').innerHTML=list.length?list.map(r=>`
+    <div class="rcard" data-id="${r.id}">
+      <div class="r1">${esc(r.nopol||'(tanpa nopol)')} <span>• ${esc(r.namaPemilik||'')}</span></div>
+      <div class="r2">${esc([r.tipe,r.model].filter(Boolean).join(' '))}${r.tahun?' • '+esc(r.tahun):''} • update ${fmtDT(r.updatedAt)}</div>
+    </div>`).join('')
+    :`<div class="empty">${records.length?'Tidak ada data yang cocok.':'Belum ada data tersimpan.'}</div>`;
+}
+ $('btnDoSearch').onclick=doSearch;
+ $('q').addEventListener('keydown',e=>{if(e.key==='Enter')doSearch()});
+ $('resultList').addEventListener('click',e=>{
+  const card=e.target.closest('.rcard');if(!card)return;
+  const r=records.find(x=>x.id===card.dataset.id);if(r)openPreview(r);
+});
+
+/* ================= KALENDER KUSTOM (klik, bukan ketik) ================= */
+const BULAN=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+let calTarget=null,calY=new Date().getFullYear(),calM=new Date().getMonth();
+function openCal(id){
+  calTarget=id;const iso=$(id).dataset.iso;
+  if(iso){const p=iso.split('-');calY=+p[0];calM=+p[1]-1}else{const d=new Date();calY=d.getFullYear();calM=d.getMonth()}
+  renderCal();$('calModal').hidden=false;
+}
+function renderCal(){
+  $('calTitle').textContent='Pilih Tanggal';
+  $('calLabel').textContent=BULAN[calM]+' '+calY;
+  const sel=$('calTarget')?$(calTarget).dataset.iso:'';
+  const today=isoToday();
+  const first=new Date(calY,calM,1).getDay(),days=new Date(calY,calM+1,0).getDate();
+  let h=['Min','Sen','Sel','Rab','Kam','Jum','Sab'].map(d=>`<div class="dow">${d}</div>`).join('');
+  for(let i=0;i<first;i++)h+='<div class="day pad"></div>';
+  for(let d=1;d<=days;d++){
+    const iso=calY+'-'+String(calM+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const cls='day'+(new Date(calY,calM,d).getDay()===0?' sun':'')+(iso===sel?' sel':'')+(iso===today?' today':'');
+    h+=`<button type="button" class="${cls}" data-iso="${iso}">${d}</button>`;
+  }
+  $('calGrid').innerHTML=h;
+}
+ $('calGrid').addEventListener('click',e=>{
+  const b=e.target.closest('.day');if(!b||b.classList.contains('pad'))return;
+  if(calTarget){$(calTarget).dataset.iso=b.dataset.iso;$(calTarget).value=fmtID(b.dataset.iso)}
+  $('calModal').hidden=true;
+});
+ $('calPrev').onclick=()=>{calM--;if(calM<0){calM=11;calY--}renderCal()};
+ $('calNext').onclick=()=>{calM++;if(calM>11){calM=0;calY++}renderCal()};
+ $('calPrevY').onclick=()=>{calY--;renderCal()};
+ $('calNextY').onclick=()=>{calY++;renderCal()};
+ $('calToday').onclick=()=>{const d=new Date();calY=d.getFullYear();calM=d.getMonth();renderCal()};
+ $('calClear').onclick=()=>{if(calTarget){$(calTarget).dataset.iso='';$(calTarget).value=''}$('calModal').hidden=true};
+ $('calClose').onclick=()=>$('calModal').hidden=true;
+['f_stnk','f_pajak','f_tterima','f_tselesai'].forEach(id=>$(id).addEventListener('click',()=>openCal(id)));
+
+/* ================= SINKRONISASI SHEETDB (Google Sheets tanpa Apps Script) ================= */
+const SHEET_COLS=['ID','Nopol','NamaPemilik','WAPemilik','Alamat','Merk','Jenis','Tipe','Model','Tahun','Silinder','DayaListrik','NoRangka','NoMesin','WarnaTNKB','BahanBakar','Kepemilikan','NoBPKB','STNK','PajakTahunan','Pengurusan','DetilPengurusan','NamaPemohon','WAPemohon','BerkasPemohon','TglTerima','TglSelesai','UpdatedAt'];
+const jArr=a=>Array.isArray(a)?a.join(', '):(a||'');
+const recToSheet=r=>({ID:r.id,Nopol:r.nopol,NamaPemilik:r.namaPemilik,WAPemilik:r.waPemilik,Alamat:r.alamat,Merk:jArr(r.merk),Jenis:jArr(r.jenis),Tipe:r.tipe,Model:r.model,Tahun:r.tahun,Silinder:r.silinder,DayaListrik:r.dayaListrik,NoRangka:r.noRangka,NoMesin:r.noMesin,WarnaTNKB:jArr(r.warnaTNKB),BahanBakar:jArr(r.bahanBakar),Kepemilikan:jArr(r.kepemilikan),NoBPKB:r.noBPKB,STNK:r.stnk||'',PajakTahunan:r.pajak||'',Pengurusan:jArr(r.pengurusan),DetilPengurusan:r.detil,NamaPemohon:r.namaPemohon,WAPemohon:r.waPemohon,BerkasPemohon:jArr(r.berkas),TglTerima:r.tglTerima||'',TglSelesai:r.tglSelesai||'',UpdatedAt:r.updatedAt});
+const sheetToRec=w=>({id:w.ID||uid(),nopol:w.Nopol||'',namaPemilik:w.NamaPemilik||'',waPemilik:w.WAPemilik||'',alamat:w.Alamat||'',merk:sA(w.Merk),jenis:sA(w.Jenis),tipe:w.Tipe||'',model:w.Model||'',tahun:w.Tahun||'',silinder:w.Silinder||'',dayaListrik:w.DayaListrik||'',noRangka:w.NoRangka||'',noMesin:w.NoMesin||'',warnaTNKB:sA(w.WarnTNKB)||sA(w.WarnaTNKB),bahanBakar:sA(w.BahanBakar),kepemilikan:sA(w.Kepemilikan),noBPKB:w.NoBPKB||'',stnk:w.STNK||'',pajak:w.PajakTahunan||'',pengurusan:sA(w.Pengurusan),detil:w.DetilPengurusan||'',namaPemohon:w.NamaPemohon||'',waPemohon:w.WAPemohon||'',berkas:sA(w.BerkasPemohon),tglTerima:w.TglTerima||'',tglSelesai:w.TglSelesai||'',updatedAt:w.UpdatedAt||new Date().toISOString()});
+const sA=s=>String(s||'').split(',').map(x=>x.trim()).filter(Boolean);
+async function syncOne(r){
+  const ep=(settings.sheetdb||'').trim();if(!ep)return;
+  try{
+    const res=await fetch(ep+'/ID/'+encodeURIComponent(r.id),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:recToSheet(r)})});
+    if(res.status===404)await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:recToSheet(r)})});
+  }catch(e){console.warn('Sinkron gagal (akan tetap tersimpan lokal)',e)}
+}
+ $('btnCopyHeader').onclick=()=>{navigator.clipboard.writeText(SHEET_COLS.join(',')).then(()=>toast('Header kolom disalin — tempel di baris 1 spreadsheet'))};
+ $('btnTestSdb').onclick=async()=>{
+  const ep=($('setSdb').value||'').trim();if(!ep)return toast('Isi dulu API URL SheetDB');
+  try{const d=await(await fetch(ep)).json();toast('Terhubung ✓ — '+d.length+' baris di sheet')}catch(e){toast('Gagal terhubung: '+e.message)}
+};
+ $('btnSendAll').onclick=async()=>{
+  const ep=($('setSdb').value||'').trim();if(!ep)return toast('Isi dulu API URL SheetDB');
+  if(!records.length)return toast('Belum ada data lokal');
+  toast('Mengirim '+records.length+' data…');
+  try{await fetch(ep+'/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:records.map(recToSheet)})});toast('Semua data terkirim ✓')}catch(e){toast('Gagal kirim: '+e.message)}
+};
+ $('btnPullAll').onclick=async()=>{
+  const ep=($('setSdb').value||'').trim();if(!ep)return toast('Isi dulu API URL SheetDB');
+  if(!confirm('Ambil semua data dari Sheet dan GANTI data lokal di perangkat ini?'))return;
+  try{
+    const d=await(await fetch(ep)).json();
+    records=d.filter(r=>r.ID).map(sheetToRec);
+    saveRecords();doSearch();toast(records.length+' data dimuat dari Sheet ✓');
+  }catch(e){toast('Gagal ambil: '+e.message)}
+};
+
+/* ================= PENGATURAN ================= */
+const OPT_LABEL={merk:'Merk',jenis:'Jenis',warna:'Warna TNKB',bbm:'Bahan Bakar',milik:'Kepemilikan',urus:'Pengurusan',berkas:'Berkas Pemohon'};
+function renderOptGroups(){
+  $('optGroups').innerHTML=Object.keys(OPT_LABEL).map(k=>`
+    <div style="margin:10px 0 2px;font-size:12px;font-weight:800;color:#475569;text-transform:uppercase">${OPT_LABEL[k]}</div>
+    <div>${(settings.opt[k]||[]).map(v=>`<span class="opt-tag" data-key="${k}" data-v="${esc(v)}">${esc(v)} <b>✕</b></span>`).join('')||'<i style="font-size:12px;color:#94a3b8">kosong</i>'}</div>
+    <div class="optadd"><input placeholder="tambah varian…" data-key="${k}"><button data-key="${k}">+</button></div>`).join('');
+}
+ $('optGroups').addEventListener('click',e=>{
+  const tag=e.target.closest('.opt-tag');
+  if(tag){settings.opt[tag.dataset.key]=settings.opt[tag.dataset.key].filter(v=>v!==tag.dataset.v);saveSettings();renderOptGroups();buildAllChips();return}
+  const add=e.target.closest('.optadd button');
+  if(add){
+    const inp=add.parentElement.querySelector('input');const v=inp.value.trim();
+    if(!v)return;
+    if(!settings.opt[add.dataset.key].some(x=>x.toLowerCase()===v.toLowerCase())){
+      settings.opt[add.dataset.key].push(v);saveSettings();renderOptGroups();buildAllChips();
+    }
+  }
+});
+ $('optGroups').addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&e.target.matches('.optadd input')){e.preventDefault();e.target.parentElement.querySelector('button').click()}
+});
+function buildAllChips(){['merk','jenis','warna','bbm','milik','urus','berkas'].forEach(k=>buildChips(k,[]))}
+function loadSettingsUI(){
+  const H=(p,p1)=>{$('setH'+p).value=settings[p1].text;$('setH'+p+'s').value=settings[p1].size;$('setH'+p+'b').checked=!!settings[p1].b;$('setH'+p+'i').checked=!!settings[p1].i;$('setH'+p+'u').checked=!!settings[p1].u};
+  H(1,'h1');H(2,'h2');
+  $('setFootUrl').value=settings.footerImg.startsWith('data:')?'':settings.footerImg;
+  $('setSdb').value=settings.sheetdb||'';
+  updateFootPrev();renderOptGroups();
+}
+function updateFootPrev(){
+  const p=$('setFootPrev');
+  if(settings.footerImg){p.src=settings.footerImg;p.style.display='block'}else p.style.display='none';
+}
+ $('setFootUrl').addEventListener('input',()=>{settings.footerImg=$('setFootUrl').value.trim();updateFootPrev()});
+ $('setFootFile').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{settings.footerImg=rd.result;$('setFootUrl').value='';updateFootPrev();toast('Gambar footer dimuat — jangan lupa Simpan Pengaturan')};
+  rd.readAsDataURL(f);
+});
+ $('setFootClr').onclick=()=>{settings.footerImg='';$('setFootUrl').value='';$('setFootFile').value='';updateFootPrev()};
+ $('btnSettings').onclick=()=>{loadSettingsUI();$('settingsModal').hidden=false};
+ $('setClose').onclick=()=>$('settingsModal').hidden=true;
+ $('setSave').onclick=()=>{
+  settings.h1={text:$('setH1').value,size:+$('setH1s').value||18,b:$('setH1b').checked?1:0,i:$('setH1i').checked?1:0,u:$('setH1u').checked?1:0};
+  settings.h2={text:$('setH2').value,size:+$('setH2s').value||12,b:$('setH2b').checked?1:0,i:$('setH2i').checked?1:0,u:$('setH2u').checked?1:0};
+  settings.footerImg=$('setFootUrl').value.trim()||settings.footerImg;
+  settings.sheetdb=$('setSdb').value.trim();
+  saveSettings();toast('Pengaturan tersimpan ✓');$('settingsModal').hidden=true;
+};
+document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.hidden=true}));
+
+/* ================= BACKUP / RESTORE JSON ================= */
+ $('btnExpData').onclick=()=>{
+  const blob=new Blob([JSON.stringify({records,settings},null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='backup-pengurusan-kendaraan-'+isoToday()+'.json';document.body.appendChild(a);a.click();a.remove();
+};
+ $('btnImpDataBtn').onclick=()=>$('impData').click();
+ $('impData').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{
+      const d=JSON.parse(rd.result);
+      if(!confirm('Ganti data & pengaturan saat ini dengan isi file backup?'))return;
+      if(Array.isArray(d.records))records=d.records;
+      if(d.settings)settings=Object.assign(JSON.parse(JSON.stringify(DEF_SET)),d.settings);
+      saveRecords();saveSettings();buildAllChips();loadSettingsUI();doSearch();toast('Backup dipulihkan ✓');
+    }catch(err){toast('File backup tidak valid')}
+  };
+  rd.readAsText(f);
+});
+
+/* ================= INISIALISASI ================= */
+loadAll();
+buildAllChips();
+doSearch();
+</script>
+</body>
+</html>
